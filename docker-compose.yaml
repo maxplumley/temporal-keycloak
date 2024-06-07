@@ -1,0 +1,127 @@
+services:
+
+  # Temporal
+  
+  cassandra:
+    image: cassandra:${CASSANDRA_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - "9042:9042"
+    volumes:
+      - /var/lib/cassandra
+
+  elasticsearch:
+    container_name: temporal-elasticsearch
+    environment:
+      cluster.routing.allocation.disk.threshold_enabled: true
+      cluster.routing.allocation.disk.watermark.low: 512mb
+      cluster.routing.allocation.disk.watermark.high: 256mb
+      cluster.routing.allocation.disk.watermark.flood_stage: 128mb
+      discovery.type: single-node
+      ES_JAVA_OPTS: -Xms256m -Xmx256m
+      xpack.security.enabled: false
+    image: elasticsearch:${ELASTICSEARCH_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - "9200:9200"
+    volumes:
+      - /var/lib/elasticsearch/data
+
+  temporal:
+    depends_on:
+      - cassandra
+      - elasticsearch
+    environment:
+      CASSANDRA_SEEDS: cassandra
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-cass.yaml
+      ENABLE_ES: true
+      ES_SEEDS: elasticsearch
+      ES_VERSION: v7
+      TEMPORAL_CLI_AUTH: "Bearer ${TEMPORAL_CLI_AUTH}"
+      USE_INTERNAL_FRONTEND: 1
+      TEMPORAL_CLI_SHOW_STACKS: 1
+      SERVICES: frontend:history:matching:worker:internal-frontend
+    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - "7233:7233"
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+      - ./server/config.yaml:/etc/temporal/config/base.yaml
+    labels:
+      kompose.volume.type: configMap
+
+  temporal-admin-tools:
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
+    image: temporalio/admin-tools:${TEMPORAL_VERSION}
+    networks:
+      - temporal-network
+    stdin_open: true
+    tty: true
+
+  temporal-ui:
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    volumes:
+      - ./server/config.yaml:/app/config.yaml:ro
+    networks:
+      - temporal-network
+    ports:
+      - "8080:8080"
+
+  # Keycloak
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: keycloak
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "exec pg_isready -U ${POSTGRES_USERNAME} -d keycloak" ]
+      interval: 5s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+    networks:
+      - temporal-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres/keycloak?currentSchema=keycloak
+      KC_DB_USERNAME: ${POSTGRES_USERNAME}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: keycloak
+      KC_HEALTH_ENABLED: true
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USERNAME}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTP_PORT: 8880
+    ports:
+      - '8880:8880'
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak/realms:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - temporal-network
+
+networks:
+  temporal-network: {}

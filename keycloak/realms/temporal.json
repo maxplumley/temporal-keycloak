@@ -1,0 +1,147 @@
+{
+  "realm": "temporal",
+  "enabled": true,
+  "users": [
+    {
+      "username": "temporal-admin-account",
+      "enabled": true,
+      "serviceAccountClientId": "temporal-admin",
+      "realmRoles": [
+        "default-roles-temporal"
+      ]
+    },
+    {
+      "username": "worker-service-account",
+      "enabled": true,
+      "serviceAccountClientId": "default-worker",
+      "realmRoles": [
+        "default-roles-temporal"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "temporal-system:admin",
+        "description": "Temporal System Administrator"
+      },
+      {
+        "name": "default:worker",
+        "description": "Default namespace Temporal worker"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "temporal-admin",
+      "name": "Service account for Temporal administrator",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "kqDoa2+jTLpdO5Ab4yqAAqrcDN7AvMXe",
+      "redirectUris": [
+        "*"
+      ],
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": [
+        "roles",
+        "temporal-permissions"
+      ],
+      "optionalClientScopes": [
+        "profile",
+        "temporal-system:admin"
+      ]
+    },
+    {
+      "clientId": "default-worker",
+      "name": "Service account for default namespace Temporal worker",
+      "clientAuthenticatorType": "client-secret",
+      "secret": "L4xybeKPwIIPg8OizgSv/OJBF+OnzVgD",
+      "redirectUris": [
+        "*"
+      ],
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": [
+        "roles",
+        "temporal-permissions"
+      ],
+      "optionalClientScopes": [
+        "profile",
+        "default:worker"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "temporal-permissions",
+      "description": "Temporal permissions scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "true",
+        "gui.order": "",
+        "consent.screen.text": ""
+      },
+      "protocolMappers": [
+        {
+          "name": "temporal-permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "introspection.token.claim": "true",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "lightweight.claim": "false",
+            "access.token.claim": "true",
+            "claim.name": "temporal-permissions",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    },
+    {
+      "name": "temporal-system:admin",
+      "description": "Temporal System admin scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "true",
+        "gui.order": "",
+        "consent.screen.text": ""
+      },
+      "protocolMappers": [
+        {
+          "name": "add-role-temporal-system:admin",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "role": "temporal-system:admin"
+          }
+        }
+      ]
+    },
+    {
+      "name": "default:worker",
+      "description": "Default namespace Temporal worker scope",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "true",
+        "gui.order": "",
+        "consent.screen.text": ""
+      },
+      "protocolMappers": [
+        {
+          "name": "add-role-default:worker",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "role": "default:worker"
+          }
+        }
+      ]
+    }
+  ]
+}
