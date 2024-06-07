@@ -2,9 +2,8 @@ global:
   authorization:
     jwtKeyProvider:
       keySourceURIs:
-        # - http://keycloak:8880/realms/temporal/protocol/openid-connect/certs
-        - http://host.docker.internal:61884/jwks.json
-    # permissionsClaimName: temporal-permissions
+        - http://keycloak:8880/realms/temporal/protocol/openid-connect/certs
+    permissionsClaimName: temporal-permissions
     authorizer: default # to use default (defaultAuthorizer)
     claimMapper: default # to use default (defaultJWTClaimMapper)
     authHeaderName: authorization # default
